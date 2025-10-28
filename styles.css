@@ -1,0 +1,26 @@
+.permanent-highlight {
+    border: 4px solid #f87171 !important; /* Rot */
+    background-color: rgba(248, 113, 113, 0.15) !important;
+    box-shadow: 0 0 15px #f87171;
+}
+
+.helper-status {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    padding: 10px 15px;
+    background-color: #111827;
+    color: #f0f4f8;
+    border: 1px solid #4DA3FF;
+    border-radius: 8px;
+    font-family: sans-serif;
+    font-size: 14px;
+    z-index: 9999;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    opacity: 1;
+    transition: opacity 0.5s ease-out;
+}
+
+.helper-status.hidden {
+    opacity: 0;
+}

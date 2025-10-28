@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "TU Memory Helfer",
+  "version": "1.0",
+  "description": "Markiert die korrekte Antwort im TU Memory Spiel.",
+  "permissions": [],
+  "host_permissions": [
+    "https://memory.iguw.tuwien.ac.at/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://memory.iguw.tuwien.ac.at/game/*"],
+      "js": ["content.js"],
+      "css": ["styles.css"]
+    }
+  ]
+}
