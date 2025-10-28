@@ -1,5 +1,4 @@
-# denki-memory
-<h1>TU Memory Helfer</h1>
+<h1>Denki Memory Helfer</h1>
 <p>
   Ein einfaches Browser-Addon, das das TU Wien Memory-Spiel automatisiert.
   Es lernt das Spielfeld durch einmaliges Hovern und markiert danach in
