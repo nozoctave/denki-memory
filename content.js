@@ -2,8 +2,11 @@
     'use strict';
 
     // === GLOBALE DATENBANKEN ===
+    // Speichert: [Karten-Element] -> "Gereinigter Definitionstext"
     const cardDefinitionMap = new Map();
+    // Speichert: "Begriff (vom Titel)" -> "Korrekte Definition"
     const allChapterDefinitions = new Map();
+    
     let currentPermanentObserver = null;
 
     // === HILFSFUNKTIONEN ===
@@ -12,11 +15,9 @@
         console.log(`[TU Memory Helfer] ${message}`);
     }
 
+    // Flexibler Regex, um "Klicken zum..." zu entfernen
     const clickPattern = /Klicken zum (Auswählen|Ansehen)/gi;
 
-    //
-    // ******** NEUER NORMALISIERER (Version 7.3) ********
-    //
     /**
      * Reinigt einen Text, um ihn vergleichbar zu machen.
      * Entfernt "Klicken"-Text, Zeilenumbrüche und doppelte Leerzeichen.
@@ -37,16 +38,7 @@
         return newText;
     }
 
-    function decodeBase64(base64) {
-        try {
-            const binaryString = atob(base64);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
-            return new TextDecoder('utf-8').decode(bytes);
-        } catch (e) { log(`Base64-Dekodierfehler: ${e}`); return null; }
-    }
+    // Die 'decodeBase64'-Funktion wird NICHT MEHR BENÖTIGT.
 
     async function fetchData(url) {
         log(`API-Anfrage an: ${url}`);
@@ -60,28 +52,26 @@
         }
     }
 
+    //
+    // ******** HIER IST DIE GROSSE ÄNDERUNG (Version 8.0) ********
+    //
     /**
-     * Holt ALLE Definitionen für das gesamte Kapitel im Voraus
+     * Holt ALLE Begriffe und Definitionen mit einer EINZIGEN API-Anfrage.
      */
     async function fetchAllDefinitions(chapterId, statusElement) {
         try {
+            // 1. Nur EINE Anfrage an die neue API-Struktur
             const allTerms = await fetchData(`https://memory.iguw.tuwien.ac.at/api/concepts/?chapter_id=${chapterId}`);
-            log(`Lade ${allTerms.length} Definitionen... (Dies kann einen Moment dauern)`);
             
-            for (const term of allTerms) {
-                try {
-                    await new Promise(resolve => setTimeout(resolve, 50)); 
-                    const defData = await fetchData(`https://memory.iguw.tuwien.ac.at/api/concepts/${term.id}/definition/`);
-                    const decodedDefinition = decodeBase64(defData.definition);
-                    
-                    // ***** FIX: API-Text sofort normalisieren *****
-                    const normalizedDefinition = normalizeText(decodedDefinition);
-                    
-                    allChapterDefinitions.set(term.term, normalizedDefinition);
-                } catch (e) {
-                    log(`Fehler beim Laden der Definition für ID ${term.id}`);
+            // 2. Daten verarbeiten (keine weiteren Anfragen nötig)
+            for (const termData of allTerms) {
+                if (termData.term && termData.definition) {
+                    // 3. Definitionen normalisieren und in unserer Datenbank speichern
+                    const normalizedDefinition = normalizeText(termData.definition);
+                    allChapterDefinitions.set(termData.term, normalizedDefinition);
                 }
             }
+            
             log(`Alle ${allChapterDefinitions.size} Definitionen wurden im Hintergrund geladen.`);
             
         } catch (e) {
@@ -92,6 +82,7 @@
 
     /**
      * PHASE 1: Startet die einmalige Lernphase.
+     * (Diese Funktion bleibt gleich, sie lernt das Spielfeld.)
      */
     function startLearningPhase(gameGrid, totalCards, statusElement) {
         return new Promise((resolve) => {
@@ -111,10 +102,10 @@
                     // Prüfen, ob der Text eine Definition ist
                     if (clickPattern.test(revealedText)) {
                         
-                        // ***** FIX: Karten-Text genauso normalisieren *****
+                        // Karten-Text normalisieren
                         const normalizedText = normalizeText(revealedText);
                         
-                        if (normalizedText.length > 5) { // 5 als Mindestlänge für eine Definition
+                        if (normalizedText.length > 5) {
                             cardDefinitionMap.set(cardElement, normalizedText);
                             log(`Karte gelernt (${cardDefinitionMap.size}/${totalCards}): "${normalizedText.substring(0, 30)}..."`);
                             statusElement.innerText = `Lernphase: ${cardDefinitionMap.size} / ${totalCards} Karten gesehen.`;
@@ -139,6 +130,7 @@
 
     /**
      * Stellt sicher, dass die markierte Karte markiert bleibt.
+     * (Diese Funktion bleibt gleich)
      */
     function startPermanentObserver(cardElement) {
         if (currentPermanentObserver) currentPermanentObserver.disconnect();
@@ -157,12 +149,12 @@
 
     /**
      * PHASE 2: Löst die aktuelle Runde (und alle folgenden).
+     * (Diese Funktion bleibt gleich)
      */
     function solveCurrentRound(statusElement) {
         log("Starte Lösungsversuch...");
         const currentTerm = document.querySelector('h2.font-bold').innerText.trim();
         
-        // Hole die vor-normalisierte Definition
         const correctDefinition = allChapterDefinitions.get(currentTerm);
 
         if (!correctDefinition) {
@@ -173,7 +165,6 @@
         log(`Suche Karte mit (normalisiertem) Text: "${correctDefinition.substring(0, 30)}..."`);
         let foundCard = null;
 
-        // Vergleiche mit den vor-normalisierten Texten aus der gelernten Map
         for (const [cardElement, cardText] of cardDefinitionMap.entries()) {
             cardElement.classList.remove('permanent-highlight');
             
@@ -189,7 +180,6 @@
             startPermanentObserver(foundCard);
             setTimeout(() => statusElement.classList.add('hidden'), 2000);
         } else {
-            // Dieser Fehler sollte jetzt wirklich nicht mehr passieren.
             log("Fehler: Karte nicht in Datenbank gefunden. Normalisierung fehlgeschlagen?");
             statusElement.innerText = "Fehler: Karte nicht gefunden.";
         }
@@ -197,6 +187,7 @@
 
     /**
      * Startet den Beobachter für den Titel (H2).
+     * (Diese Funktion bleibt gleich)
      */
     function startTitleObserver(titleElement, statusElement) {
         let currentTitle = titleElement.innerText;
@@ -206,7 +197,6 @@
                 currentTitle = titleElement.innerText;
                 statusElement.classList.remove('hidden');
         
-                // Kurze Verzögerung, falls das Spiel den Klick noch verarbeitet
                 setTimeout(() => solveCurrentRound(statusElement), 50); 
             }
         });
@@ -217,9 +207,10 @@
 
     /**
      * HAUPT-INITIALISIERUNG
+     * (Diese Funktion bleibt gleich)
      */
     async function initializeHelper() {
-        log('Content-Skript wird geladen... (Version 7.3)');
+        log('Content-Skript wird geladen... (Version 8.0)');
         
         const statusElement = document.createElement('div');
         statusElement.className = 'helper-status';
@@ -241,7 +232,7 @@
         const chapterId = chapterIdMatch[1];
         const totalCardsToLearn = gameGrid.children.length; 
 
-        // 1. Alle Definitionen für das Kapitel im Hintergrund laden
+        // 1. Alle Definitionen für das Kapitel im Hintergrund laden (NEUE FUNKTION)
         statusElement.innerText = "Lade alle Definitionen im Hintergrund...";
         await fetchAllDefinitions(chapterId, statusElement);
 
@@ -252,7 +243,7 @@
         // 3. Lernphase ist beendet. Lösungs-Modus starten.
         statusElement.innerText = "Lernphase abgeschlossen. Starte Lösungs-Modus.";
         
-        // 4. Titel-Beobachter starten, der bei Rundenwechsel 'solveCurrentRound' aufruft
+        // 4. Titel-Beobachter starten
         startTitleObserver(targetTermElement, statusElement);
         
         // 5. Die erste Runde sofort lösen
