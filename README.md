@@ -1,4 +1,8 @@
 <h1>Denki Memory Helfer</h1>
+<h2>FIX:</h2>
+Die Requests wurden geändert (vermutlich weil sie zu viele API requests bekommen haben)
+Dadurch ist das addon kurz kaputtgegangen habs jetzt schnell mal gefixt sollte wieder gehen
+
 <p>
   Ein einfaches Browser-Addon, das das TU Wien Memory-Spiel automatisiert.
   Es lernt das Spielfeld durch einmaliges Hovern und markiert danach in
